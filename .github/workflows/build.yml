@@ -21,7 +21,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-            apt-get update && apt-get install -y libelf-dev dwarves \
+            apt-get update && apt-get install -y git libelf-dev dwarves \
             build-essential gcc-aarch64-linux-gnu bison \
             qemu-user-static qemu-system-arm qemu-efi-aarch64 u-boot-tools binfmt-support \
             debootstrap flex libssl-dev bc rsync kmod cpio xz-utils fakeroot parted \
@@ -109,7 +109,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-            apt-get update && apt-get install -y libelf-dev dwarves \
+            apt-get update && apt-get install -y git libelf-dev dwarves \
             build-essential gcc-aarch64-linux-gnu bison \
             qemu-user-static qemu-system-arm qemu-efi-aarch64 u-boot-tools binfmt-support \
             debootstrap flex libssl-dev bc rsync kmod cpio xz-utils fakeroot parted \
