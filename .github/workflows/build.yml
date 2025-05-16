@@ -6,105 +6,97 @@ on:
 run-name: Build
 
 jobs:
-  # rootfs:
-  #   runs-on: ubuntu-latest
-  #   container:
-  #     image: ubuntu:22.04
-  #   name: Build rootfs 
-  #   strategy:
-  #     matrix:
-  #       flavor: [server]
-  #       suite: [jammy]
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
+  rootfs:
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:22.04
+    name: Build rootfs 
+    strategy:
+      matrix:
+        flavor: [server]
+        suite: [jammy]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
+      - name: Install dependencies
+        run: |
+            apt-get update && apt-get install -y git git-lfs libelf-dev dwarves \
+            build-essential gcc-aarch64-linux-gnu bison \
+            qemu-user-static qemu-system-arm qemu-efi-aarch64 u-boot-tools binfmt-support \
+            debootstrap flex libssl-dev bc rsync kmod cpio xz-utils fakeroot parted \
+            udev dosfstools uuid-runtime device-tree-compiler python3 \
+            python-is-python3 fdisk bc debhelper python3-pyelftools python3-setuptools \
+            python3-pkg-resources swig libfdt-dev libpython3-dev dctrl-tools python3-distutils
 
+      - name: Checkout LFS
+        run: git lfs fetch && git lfs checkout
 
-  #     - name: Install dependencies
-  #       run: |
-  #         sudo apt-get update && sudo apt-get purge needrestart -y && sudo apt-get upgrade -y
-  #         PY3_VERSION=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
-  #         DISTUTILS_PKG="python${PY3_VERSION}-distutils"
-  #         sudo apt-get install -y build-essential git git-lfs gcc-aarch64-linux-gnu bison \
-  #           qemu-user-static qemu-system-arm qemu-efi-aarch64 u-boot-tools binfmt-support \
-  #           debootstrap flex libssl-dev bc rsync kmod cpio xz-utils fakeroot parted \
-  #           udev dosfstools uuid-runtime git-lfs device-tree-compiler python3 \
-  #           python-is-python3 fdisk bc debhelper python3-pyelftools python3-setuptools \
-  #           python3-pkg-resources swig libfdt-dev libpython3-dev dctrl-tools \
-  #           weston chromium seatd
-  #         sudo apt-get install -y "$DISTUTILS_PKG" || \
-  #           sudo apt-get install -y $(apt-cache search ^python3.*-distutils$ | head -n1 | cut -d' ' -f1)
+      - name: Add kiosk overlay files
+        run: |
+          mkdir -p kiosk-overlay/etc/systemd/system
+          mkdir -p kiosk-overlay/home/kiosk/.config
+          mkdir -p kiosk-overlay/usr/local/sbin
+          mkdir -p build/rootfs_overlay
 
+          cat <<EOF > kiosk-overlay/etc/systemd/system/kiosk.service
+          [Unit]
+          Description=Wayland Chromium Kiosk
+          After=graphical.target systemd-user-sessions.service
 
-  #     - name: Checkout LFS
-  #       run: git lfs fetch && git lfs checkout
+          [Service]
+          ExecStart=/usr/bin/weston --backend=drm-backend.so --tty=1
+          Restart=always
+          RestartSec=1
+          User=kiosk
+          Environment=XDG_RUNTIME_DIR=/run/user/1000
+          WorkingDirectory=/home/kiosk
 
-  #     - name: Add kiosk overlay files
-  #       run: |
-  #         mkdir -p kiosk-overlay/etc/systemd/system
-  #         mkdir -p kiosk-overlay/home/kiosk/.config
-  #         mkdir -p kiosk-overlay/usr/local/sbin
-  #         mkdir -p build/rootfs_overlay
+          [Install]
+          WantedBy=multi-user.target
+          EOF
 
-  #         cat <<EOF > kiosk-overlay/etc/systemd/system/kiosk.service
-  #         [Unit]
-  #         Description=Wayland Chromium Kiosk
-  #         After=graphical.target systemd-user-sessions.service
+          cat <<EOF > kiosk-overlay/home/kiosk/.config/weston.ini
+          [core]
+          idle-time=0
+          xwayland=false
 
-  #         [Service]
-  #         ExecStart=/usr/bin/weston --backend=drm-backend.so --tty=1
-  #         Restart=always
-  #         RestartSec=1
-  #         User=kiosk
-  #         Environment=XDG_RUNTIME_DIR=/run/user/1000
-  #         WorkingDirectory=/home/kiosk
+          [shell]
+          panel-position=none
+          locking=false
+          background-color=0xff000000
 
-  #         [Install]
-  #         WantedBy=multi-user.target
-  #         EOF
+          [autolaunch]
+          command=/usr/bin/chromium --ozone-platform=wayland \
+            --enable-features=UseOzonePlatform --noerrdialogs \
+            --disable-infobars --disable-session-crashed-bubble \
+            --no-first-run --kiosk https://example.com
+          EOF
 
-  #         cat <<EOF > kiosk-overlay/home/kiosk/.config/weston.ini
-  #         [core]
-  #         idle-time=0
-  #         xwayland=false
+          cat <<EOF > kiosk-overlay/usr/local/sbin/setup-kiosk.sh
+          #!/bin/bash
+          useradd -m -s /bin/bash kiosk || true
+          mkdir -p /etc/systemd/system/multi-user.target.wants
+          ln -sf /etc/systemd/system/kiosk.service /etc/systemd/system/multi-user.target.wants/kiosk.service
+          chown -R kiosk:kiosk /home/kiosk
+          EOF
+          chmod +x kiosk-overlay/usr/local/sbin/setup-kiosk.sh
 
-  #         [shell]
-  #         panel-position=none
-  #         locking=false
-  #         background-color=0xff000000
+      - name: Build
+        run: |
+          cp -a kiosk-overlay/* ./build/rootfs_overlay/
+          ./build.sh --suite=${{ matrix.suite }} --flavor=${{ matrix.flavor }} --rootfs-only
 
-  #         [autolaunch]
-  #         command=/usr/bin/chromium --ozone-platform=wayland \
-  #           --enable-features=UseOzonePlatform --noerrdialogs \
-  #           --disable-infobars --disable-session-crashed-bubble \
-  #           --no-first-run --kiosk https://example.com
-  #         EOF
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-${{ matrix.suite == 'jammy' && '22.04' || matrix.suite == 'noble' && '24.04' }}-preinstalled-${{ matrix.flavor }}-arm64-rootfs
+          path: ./build/ubuntu-${{ matrix.suite == 'jammy' && '22.04' || matrix.suite == 'noble' && '24.04' }}-preinstalled-${{ matrix.flavor }}-arm64.rootfs.tar.xz
+          if-no-files-found: error
 
-  #         cat <<EOF > kiosk-overlay/usr/local/sbin/setup-kiosk.sh
-  #         #!/bin/bash
-  #         useradd -m -s /bin/bash kiosk || true
-  #         mkdir -p /etc/systemd/system/multi-user.target.wants
-  #         ln -sf /etc/systemd/system/kiosk.service /etc/systemd/system/multi-user.target.wants/kiosk.service
-  #         chown -R kiosk:kiosk /home/kiosk
-  #         EOF
-  #         chmod +x kiosk-overlay/usr/local/sbin/setup-kiosk.sh
-
-  #     - name: Build
-  #       run: |
-  #         sudo cp -a kiosk-overlay/* ./build/rootfs_overlay/
-  #         sudo ./build.sh --suite=${{ matrix.suite }} --flavor=${{ matrix.flavor }} --rootfs-only
-
-  #     - name: Upload
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: ubuntu-${{ matrix.suite == 'jammy' && '22.04' || matrix.suite == 'noble' && '24.04' }}-preinstalled-${{ matrix.flavor }}-arm64-rootfs
-  #         path: ./build/ubuntu-${{ matrix.suite == 'jammy' && '22.04' || matrix.suite == 'noble' && '24.04' }}-preinstalled-${{ matrix.flavor }}-arm64.rootfs.tar.xz
-  #         if-no-files-found: error
-
-  #     - name: Fast cleanup
-  #       run: |
-  #         rm -rf ./build ./images || true
+      - name: Fast cleanup
+        run: |
+          rm -rf ./build ./images || true
 
   kernel:
     runs-on: ubuntu-latest
