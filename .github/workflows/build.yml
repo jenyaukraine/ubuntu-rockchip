@@ -21,16 +21,13 @@ jobs:
 
       - name: Install dependencies
         run: |
-            apt-get update && apt-get install -y git git-lfs libelf-dev dwarves \
+            apt-get update && apt-get install -y libelf-dev dwarves \
             build-essential gcc-aarch64-linux-gnu bison \
             qemu-user-static qemu-system-arm qemu-efi-aarch64 u-boot-tools binfmt-support \
             debootstrap flex libssl-dev bc rsync kmod cpio xz-utils fakeroot parted \
             udev dosfstools uuid-runtime device-tree-compiler python3 \
             python-is-python3 fdisk bc debhelper python3-pyelftools python3-setuptools \
             python3-pkg-resources swig libfdt-dev libpython3-dev dctrl-tools python3-distutils
-
-      - name: Checkout LFS
-        run: git lfs fetch && git lfs checkout
 
       - name: Add kiosk overlay files
         run: |
@@ -112,16 +109,13 @@ jobs:
 
       - name: Install dependencies
         run: |
-            apt-get update && apt-get install -y git git-lfs libelf-dev dwarves \
+            apt-get update && apt-get install -y libelf-dev dwarves \
             build-essential gcc-aarch64-linux-gnu bison \
             qemu-user-static qemu-system-arm qemu-efi-aarch64 u-boot-tools binfmt-support \
             debootstrap flex libssl-dev bc rsync kmod cpio xz-utils fakeroot parted \
             udev dosfstools uuid-runtime device-tree-compiler python3 \
             python-is-python3 fdisk bc debhelper python3-pyelftools python3-setuptools \
             python3-pkg-resources swig libfdt-dev libpython3-dev dctrl-tools python3-distutils
-
-      - name: Checkout LFS
-        run: git lfs fetch && git lfs checkout
 
       - name: Build
         run: sudo ./build.sh --suite=${{ matrix.suite }} --kernel-only
