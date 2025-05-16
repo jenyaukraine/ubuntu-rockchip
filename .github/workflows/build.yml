@@ -21,13 +21,13 @@ jobs:
 
       - name: Install dependencies
         run: |
-          apt-get update && apt-get install -y git libelf-dev dwarves \
+          apt-get update && apt-get install -y live-build git libelf-dev dwarves \
           build-essential gcc-aarch64-linux-gnu bison \
           qemu-user-static qemu-system-arm qemu-efi-aarch64 u-boot-tools binfmt-support \
           debootstrap flex libssl-dev bc rsync kmod cpio xz-utils fakeroot parted \
           udev dosfstools uuid-runtime device-tree-compiler python3 \
           python-is-python3 fdisk bc debhelper python3-pyelftools python3-setuptools \
-          python3-pkg-resources swig libfdt-dev libpython3-dev dctrl-tools python3-distutils
+          python3-pkg-resources swig libfdt-dev libpython3-dev dctrl-tools python3-distutils    sudo apt-get update && sudo apt-get install -y \
 
       - name: Add kiosk overlay files
         run: |
