@@ -219,6 +219,15 @@ fi
 # Create the root filesystem
 ./scripts/build-rootfs.sh
 
+
+# Run kiosk provisioning if present
+if [ -f "${PWD}/build/rootfs/usr/local/sbin/setup-kiosk.sh" ]; then
+    echo "[INFO] Running setup-kiosk.sh in chroot..."
+    chmod +x "${PWD}/build/rootfs/usr/local/sbin/setup-kiosk.sh"
+    LANG=C.UTF-8 chroot "${PWD}/build/rootfs" /usr/local/sbin/setup-kiosk.sh
+fi
+
+
 # Create the disk image
 ./scripts/config-image.sh
 
