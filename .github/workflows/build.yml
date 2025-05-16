@@ -62,7 +62,7 @@ jobs:
     name: Build kernel 
     strategy:
       matrix:
-        suite: [noble]
+        suite: [jammy]
     steps:
       - name: Get more disk space
         uses: jlumbroso/free-disk-space@main
@@ -97,7 +97,6 @@ jobs:
 
           sudo apt-get install -y "${DISTUTILS_PKG}" || sudo apt-get install -y $(apt-cache search ^python3.*-distutils$ | head -n1 | cut -d' ' -f1)
 
-
       - name: Build
         run: sudo ./build.sh --suite=${{ matrix.suite }} --kernel-only
 
@@ -115,8 +114,8 @@ jobs:
     strategy:
       matrix:
         board: [rock-5c]
-        flavor: [desktop, server]
-        suite: [noble]
+        flavor: [server]
+        suite: [jammy]
     steps:
       - name: Get more disk space
         uses: jlumbroso/free-disk-space@main
