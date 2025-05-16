@@ -90,6 +90,12 @@ jobs:
           cp -a kiosk-overlay/* ./build/rootfs_overlay/
           ./build.sh --suite=${{ matrix.suite }} --flavor=${{ matrix.flavor }} --rootfs-only
 
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-${{ matrix.suite }}-preinstalled-${{ matrix.flavor }}-arm64-rootfs
+          path: ./build/ubuntu-${{ matrix.suite }}-preinstalled-${{ matrix.flavor }}-arm64.rootfs.tar.xz
+
       - name: Extract rootfs
         run: |
           mkdir -p ./build/rootfs
@@ -105,11 +111,7 @@ jobs:
           path: ./build
           key: rootfs-${{ matrix.suite }}-${{ matrix.flavor }}-${{ hashFiles('**/build.sh') }}
 
-      - name: Upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: ubuntu-${{ matrix.suite }}-preinstalled-${{ matrix.flavor }}-arm64-rootfs
-          path: ./build/ubuntu-${{ matrix.suite }}-preinstalled-${{ matrix.flavor }}-arm64.rootfs.tar.xz
+
 
   kernel:
     runs-on: ubuntu-latest
