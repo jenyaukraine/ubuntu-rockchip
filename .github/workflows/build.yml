@@ -19,8 +19,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Checkout LFS
-        run: git lfs fetch && git lfs checkout
+
 
       - name: Install dependencies
         run: |
@@ -36,6 +35,10 @@ jobs:
             weston chromium seatd
           sudo apt-get install -y "$DISTUTILS_PKG" || \
             sudo apt-get install -y $(apt-cache search ^python3.*-distutils$ | head -n1 | cut -d' ' -f1)
+
+
+      - name: Checkout LFS
+        run: git lfs fetch && git lfs checkout
 
       - name: Add kiosk overlay files
         run: |
@@ -115,8 +118,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Checkout LFS
-        run: git lfs fetch && git lfs checkout
 
       - name: Install dependencies
         run: |
@@ -133,6 +134,9 @@ jobs:
           sudo apt-get install -y "$DISTUTILS_PKG" || \
             sudo apt-get install -y $(apt-cache search ^python3.*-distutils$ | head -n1 | cut -d' ' -f1)
 
+      - name: Checkout LFS
+        run: git lfs fetch && git lfs checkout
+        
       - name: Build
         run: sudo ./build.sh --suite=${{ matrix.suite }} --kernel-only
 
