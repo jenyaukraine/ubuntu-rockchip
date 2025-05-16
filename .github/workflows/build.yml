@@ -21,13 +21,14 @@ jobs:
 
       - name: Install dependencies
         run: |
-            apt-get update && apt-get install -y git libelf-dev dwarves \
-            build-essential gcc-aarch64-linux-gnu bison \
-            qemu-user-static qemu-system-arm qemu-efi-aarch64 u-boot-tools binfmt-support \
-            debootstrap flex libssl-dev bc rsync kmod cpio xz-utils fakeroot parted \
-            udev dosfstools uuid-runtime device-tree-compiler python3 \
-            python-is-python3 fdisk bc debhelper python3-pyelftools python3-setuptools \
-            python3-pkg-resources swig libfdt-dev libpython3-dev dctrl-tools python3-distutils
+          apt-get update && apt-get install -y git libelf-dev dwarves \
+          build-essential gcc-aarch64-linux-gnu bison \
+          qemu-user-static qemu-system-arm qemu-efi-aarch64 u-boot-tools binfmt-support \
+          debootstrap flex libssl-dev bc rsync kmod cpio xz-utils fakeroot parted \
+          udev dosfstools uuid-runtime device-tree-compiler python3 \
+          python-is-python3 fdisk bc debhelper python3-pyelftools python3-setuptools \
+          python3-pkg-resources swig libfdt-dev libpython3-dev dctrl-tools python3-distutils \
+          weston chromium seatd
 
       - name: Add kiosk overlay files
         run: |
@@ -39,7 +40,7 @@ jobs:
           cat <<EOF > kiosk-overlay/etc/systemd/system/kiosk.service
           [Unit]
           Description=Wayland Chromium Kiosk
-          After=graphical.target systemd-user-sessions.service
+          After=systemd-user-sessions.service
 
           [Service]
           ExecStart=/usr/bin/weston --backend=drm-backend.so --tty=1
@@ -79,27 +80,35 @@ jobs:
           EOF
           chmod +x kiosk-overlay/usr/local/sbin/setup-kiosk.sh
 
+      - name: Restore rootfs build cache
+        uses: actions/cache@v4
+        with:
+          path: ./build
+          key: rootfs-${{ matrix.suite }}-${{ matrix.flavor }}-${{ hashFiles('**/build.sh') }}
+
       - name: Build
         run: |
           cp -a kiosk-overlay/* ./build/rootfs_overlay/
           ./build.sh --suite=${{ matrix.suite }} --flavor=${{ matrix.flavor }} --rootfs-only
+          chroot ./build/rootfs /usr/local/sbin/setup-kiosk.sh
+
+      - name: Save rootfs cache
+        uses: actions/cache/save@v4
+        with:
+          path: ./build
+          key: rootfs-${{ matrix.suite }}-${{ matrix.flavor }}-${{ hashFiles('**/build.sh') }}
 
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: ubuntu-${{ matrix.suite == 'jammy' && '22.04' || matrix.suite == 'noble' && '24.04' }}-preinstalled-${{ matrix.flavor }}-arm64-rootfs
-          path: ./build/ubuntu-${{ matrix.suite == 'jammy' && '22.04' || matrix.suite == 'noble' && '24.04' }}-preinstalled-${{ matrix.flavor }}-arm64.rootfs.tar.xz
-          if-no-files-found: error
-
-      - name: Fast cleanup
-        run: |
-          rm -rf ./build ./images || true
+          name: ubuntu-${{ matrix.suite }}-preinstalled-${{ matrix.flavor }}-arm64-rootfs
+          path: ./build/ubuntu-${{ matrix.suite }}-preinstalled-${{ matrix.flavor }}-arm64.rootfs.tar.xz
 
   kernel:
     runs-on: ubuntu-latest
     container:
       image: ubuntu:22.04
-    name: Build kernel 
+    name: Build kernel
     strategy:
       matrix:
         suite: [jammy]
@@ -109,20 +118,77 @@ jobs:
 
       - name: Install dependencies
         run: |
-            apt-get update && apt-get install -y git libelf-dev dwarves \
-            build-essential gcc-aarch64-linux-gnu bison \
-            qemu-user-static qemu-system-arm qemu-efi-aarch64 u-boot-tools binfmt-support \
-            debootstrap flex libssl-dev bc rsync kmod cpio xz-utils fakeroot parted \
-            udev dosfstools uuid-runtime device-tree-compiler python3 \
-            python-is-python3 fdisk bc debhelper python3-pyelftools python3-setuptools \
-            python3-pkg-resources swig libfdt-dev libpython3-dev dctrl-tools python3-distutils
+          apt-get update && apt-get install -y git libelf-dev dwarves \
+          build-essential gcc-aarch64-linux-gnu bison \
+          qemu-user-static qemu-system-arm qemu-efi-aarch64 u-boot-tools binfmt-support \
+          debootstrap flex libssl-dev bc rsync kmod cpio xz-utils fakeroot parted \
+          udev dosfstools uuid-runtime device-tree-compiler python3 \
+          python-is-python3 fdisk bc debhelper python3-pyelftools python3-setuptools \
+          python3-pkg-resources swig libfdt-dev libpython3-dev dctrl-tools python3-distutils
+
+      - name: Restore kernel build cache
+        uses: actions/cache@v4
+        with:
+          path: ./build
+          key: kernel-${{ matrix.suite }}-${{ hashFiles('**/build.sh') }}
 
       - name: Build
         run: ./build.sh --suite=${{ matrix.suite }} --kernel-only
 
+      - name: Save kernel build cache
+        uses: actions/cache/save@v4
+        with:
+          path: ./build
+          key: kernel-${{ matrix.suite }}-${{ hashFiles('**/build.sh') }}
+
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: linux-rockchip-${{ matrix.suite == 'jammy' && '5.10' || matrix.suite == 'noble' && '6.1' }}
+          name: linux-rockchip-${{ matrix.suite }}
           path: ./build/linux-*.deb
-          if-no-files-found: error
+
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:22.04
+    needs: [rootfs, kernel]
+    name: Build image
+    strategy:
+      matrix:
+        board: [rock-5c]
+        flavor: [server]
+        suite: [jammy]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          apt-get update && apt-get install -y git build-essential gcc-aarch64-linux-gnu bison \
+          qemu-user-static qemu-system-arm qemu-efi u-boot-tools binfmt-support \
+          debootstrap flex libssl-dev bc rsync kmod cpio xz-utils fakeroot parted \
+          udev dosfstools uuid-runtime device-tree-compiler python3 \
+          python-is-python3 fdisk bc debhelper python3-pyelftools python3-setuptools \
+          python3-distutils python3-pkg-resources swig libfdt-dev libpython3-dev dctrl-tools
+
+      - name: Download rootfs
+        uses: actions/download-artifact@v4
+        with:
+          name: ubuntu-${{ matrix.suite }}-preinstalled-${{ matrix.flavor }}-arm64-rootfs
+          path: ./build/
+
+      - name: Download kernel
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-rockchip-${{ matrix.suite }}
+          path: ./build/
+
+      - name: Build
+        run: ./build.sh --board=${{ matrix.board }} --suite=${{ matrix.suite }} --flavor=${{ matrix.flavor }}
+
+      - name: Upload image
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-${{ matrix.suite }}-preinstalled-${{ matrix.flavor }}-arm64-${{ matrix.board }}
+          path: ./images/ubuntu-*-preinstalled-${{ matrix.flavor }}-arm64-${{ matrix.board }}.*
