@@ -8,22 +8,14 @@ run-name: Build
 jobs:
   rootfs:
     runs-on: ubuntu-latest
+    container:
+     image: ubuntu:22.04
     name: Build rootfs 
     strategy:
       matrix:
         flavor: [server]
         suite: [jammy]
     steps:
-      - name: Get more disk space
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: false
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          swap-storage: true
-
       - name: Checkout code
         uses: actions/checkout@v4
 
