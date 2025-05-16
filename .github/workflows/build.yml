@@ -120,7 +120,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt-get install -y git git-lfs libelf-dev dwarves \
+            apt-get install -y git git-lfs libelf-dev dwarves \
             build-essential gcc-aarch64-linux-gnu bison \
             qemu-user-static qemu-system-arm qemu-efi-aarch64 u-boot-tools binfmt-support \
             debootstrap flex libssl-dev bc rsync kmod cpio xz-utils fakeroot parted \
