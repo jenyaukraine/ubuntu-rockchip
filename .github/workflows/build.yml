@@ -118,7 +118,7 @@ jobs:
             python3-pkg-resources swig libfdt-dev libpython3-dev dctrl-tools python3-distutils
 
       - name: Build
-        run: sudo ./build.sh --suite=${{ matrix.suite }} --kernel-only
+        run: ./build.sh --suite=${{ matrix.suite }} --kernel-only
 
       - name: Upload
         uses: actions/upload-artifact@v4
