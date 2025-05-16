@@ -122,21 +122,17 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update && sudo apt-get purge needrestart -y && sudo apt-get upgrade -y
-          PY3_VERSION=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
-          DISTUTILS_PKG="python${PY3_VERSION}-distutils"
           sudo apt-get install -y git git-lfs libelf-dev dwarves \
             build-essential gcc-aarch64-linux-gnu bison \
             qemu-user-static qemu-system-arm qemu-efi-aarch64 u-boot-tools binfmt-support \
             debootstrap flex libssl-dev bc rsync kmod cpio xz-utils fakeroot parted \
             udev dosfstools uuid-runtime git-lfs device-tree-compiler python3 \
             python-is-python3 fdisk bc debhelper python3-pyelftools python3-setuptools \
-            python3-pkg-resources swig libfdt-dev libpython3-dev dctrl-tools
-          sudo apt-get install -y "$DISTUTILS_PKG" || \
-            sudo apt-get install -y $(apt-cache search ^python3.*-distutils$ | head -n1 | cut -d' ' -f1)
+            python3-pkg-resources swig libfdt-dev libpython3-dev dctrl-tools python3-distutils
 
       - name: Checkout LFS
         run: git lfs fetch && git lfs checkout
-        
+
       - name: Build
         run: sudo ./build.sh --suite=${{ matrix.suite }} --kernel-only
 
