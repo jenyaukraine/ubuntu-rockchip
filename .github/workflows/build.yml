@@ -4,15 +4,7 @@ on:
   workflow_dispatch:
 
 run-name: Build
-
-jobs:
-  name: Build
-
-on:
-  workflow_dispatch:
-
-run-name: Build
-
+  
 jobs:
   rootfs:
     runs-on: ubuntu-latest
