@@ -1,0 +1,14 @@
+[Unit]
+Description=Wayland Chromium Kiosk
+After=systemd-user-sessions.service
+
+[Service]
+ExecStart=/usr/bin/weston --backend=drm-backend.so --tty=1
+Restart=always
+RestartSec=1
+User=kiosk
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+WorkingDirectory=/home/kiosk
+
+[Install]
+WantedBy=multi-user.target

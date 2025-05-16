@@ -6,16 +6,32 @@ on:
 run-name: Build
 
 jobs:
+  name: Build
+
+on:
+  workflow_dispatch:
+
+run-name: Build
+
+jobs:
   rootfs:
     runs-on: ubuntu-latest
-    container:
-      image: ubuntu:22.04
     name: Build rootfs 
     strategy:
       matrix:
         flavor: [server]
         suite: [jammy]
     steps:
+      - name: Get more disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          swap-storage: true
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -89,6 +105,14 @@ jobs:
         run: |
           cp -a kiosk-overlay/* ./build/rootfs_overlay/
           ./build.sh --suite=${{ matrix.suite }} --flavor=${{ matrix.flavor }} --rootfs-only
+
+      - name: Extract rootfs
+        run: |
+          mkdir -p ./build/rootfs
+          tar -xpf ./build/ubuntu-${{ matrix.suite }}-preinstalled-${{ matrix.flavor }}-arm64.rootfs.tar.xz -C ./build/rootfs
+
+      - name: Run kiosk setup in chroot
+        run: |
           chroot ./build/rootfs /usr/local/sbin/setup-kiosk.sh
 
       - name: Save rootfs cache
